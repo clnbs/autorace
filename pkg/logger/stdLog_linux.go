@@ -10,11 +10,11 @@ import (
 //ANSI color to print logs with color on std logger.
 // It does not works on Windows systems.
 const (
-	colorReset = "\033[0m"
-	colorRed = "\033[31m"
-	colorGreen = "\033[32m"
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
 	colorYellow = "\033[33m"
-	colorCyan = "\033[36m"
+	colorCyan   = "\033[36m"
 )
 
 //LogOutput express the Std logs should be printed on.
