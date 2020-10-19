@@ -1,0 +1,86 @@
+version: '3'
+services:
+  rabbit:
+    image: "rabbitmq:3.8.3-management"
+    container_name: rabbit
+    ports:
+      - 5672:5672
+      - 8080:15672
+    networks:
+      - rabbitmq
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:15672" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: "redis:6.0"
+    container_name: redis
+    ports:
+      - 6379:6379
+    networks:
+      - autorace_cache
+  autorace_static:
+    image: autorace_static:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - rabbitmq
+      - logs
+      - autorace_cache
+    depends_on:
+      - rabbit
+      - fluentd
+
+
+  fluentd:
+    build:
+      context: ../.
+      dockerfile: build/package/fluentd/Dockerfile
+    container_name: fluentd
+    ports:
+      - 24224:24224
+      - 5140:5140/udp
+      - 2020:2020
+    links:
+      - "elasticsearch"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: 100m
+        max-file: "5"
+    networks:
+      - logs
+
+  elasticsearch:
+    image: elasticsearch:7.9.2
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - bootstrap.memory_lock=false
+      - cluster.initial_master_nodes=es01
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    networks:
+      - logs
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.9.2
+    container_name: kib01
+    links:
+      - "elasticsearch"
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es01:9200
+      ELASTICSEARCH_HOSTS: http://es01:9200
+    networks:
+      - logs
+
+networks:
+  logs:
+    driver: bridge
+  rabbitmq:
+    driver: bridge
+  autorace_cache:
+    driver: bridge

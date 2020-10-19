@@ -1,0 +1,7 @@
+FROM golang:1.14 AS builder
+WORKDIR /go/src/github.com/clnbs/autorace
+RUN apt update && apt upgrade -y && apt-get install libgl1-mesa-dev libxrandr-dev libxcursor-dev libxi-dev libghc-x11-dev binutils-mingw-w64 mingw-w64 libx11-dev xorg-dev -y --install-recommends
+COPY . .
+RUN go get -u ./...
+RUN go mod vendor
+RUN GO111MODULE=on CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ GOOS=windows GOARCH=amd64 go build -o autorace.exe cmd/client/main.go
