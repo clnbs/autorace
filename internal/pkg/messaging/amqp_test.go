@@ -18,7 +18,13 @@ func byteToString(msg []byte) interface{} {
 }
 
 func TestRabbitConnection_ReceiveMessageOnTopic(t *testing.T) {
-	rConn, err := NewRabbitConnection()
+	config := RabbitConnectionConfiguration{
+		Host:     "localhost",
+		Port:     "5672",
+		User:     "guest",
+		Password: "guest",
+	}
+	rConn, err := NewRabbitConnection(config)
 	if err != nil {
 		t.Fatal("could not get a connection with RabbitMQ :", err)
 	}
@@ -36,7 +42,7 @@ func TestRabbitConnection_ReceiveMessageOnTopic(t *testing.T) {
 			fmt.Println("received :", receivedMsg)
 			fmt.Println(receivedMsg == "\"end\"")
 		}
-		done<-true
+		done <- true
 	}()
 	<-rdyToReceive
 	go func() {
@@ -56,7 +62,13 @@ func stringHandler(msg amqp.Delivery) {
 }
 
 func TestRabbitConnection_ReceiveMessageOnTopicWithHandler(t *testing.T) {
-	rConn, err := NewRabbitConnection()
+	config := RabbitConnectionConfiguration{
+		Host:     "localhost",
+		Port:     "5672",
+		User:     "guest",
+		Password: "guest",
+	}
+	rConn, err := NewRabbitConnection(config)
 	if err != nil {
 		t.Fatal("could not get a connection with RabbitMQ :", err)
 	}
@@ -77,7 +89,7 @@ func TestRabbitConnection_ReceiveMessageOnTopicWithHandler(t *testing.T) {
 		rConn.SendMessageOnTopic("message 6 on test.topic.handler", "test.topic.handler")
 		rConn.SendMessageOnTopic("end on test.topic.handler", "test.topic.handler")
 	}()
-	time.Sleep(1*time.Second)
+	time.Sleep(1 * time.Second)
 }
 
 func stringResponseCreator(msg amqp.Delivery) (interface{}, string) {
@@ -103,7 +115,13 @@ func computeTestCallbackResponse(msg []byte) interface{} {
 }
 
 func TestRabbitConnection_ReceiveMessageOnTopicWithCallback(t *testing.T) {
-	rConn, err := NewRabbitConnection()
+	config := RabbitConnectionConfiguration{
+		Host:     "localhost",
+		Port:     "5672",
+		User:     "guest",
+		Password: "guest",
+	}
+	rConn, err := NewRabbitConnection(config)
 	if err != nil {
 		t.Fatal("could not get a connection with RabbitMQ :", err)
 	}
@@ -122,7 +140,7 @@ func TestRabbitConnection_ReceiveMessageOnTopicWithCallback(t *testing.T) {
 	// Starting a mock that fake a asset request
 	// second step, start to listen to a possible response
 	go func() {
-		err := rConn.ReceiveMessageOnTopic("test.topic.callback." + clientID.String(), computeTestCallbackResponse, received ,rdyToReceive)
+		err := rConn.ReceiveMessageOnTopic("test.topic.callback."+clientID.String(), computeTestCallbackResponse, received, rdyToReceive)
 		if err != nil {
 			t.Fatal("could not receive data with handler :", err)
 		}
@@ -139,10 +157,10 @@ func TestRabbitConnection_ReceiveMessageOnTopicWithCallback(t *testing.T) {
 		rConn.SendMessageOnTopic(clientID.String(), "test.topic.callback.testing")
 		rConn.SendMessageOnTopic(clientID.String(), "test.topic.callback.testing")
 	}()
-	for i := 0; i <  7; i++ {
+	for i := 0; i < 7; i++ {
 		str := <-received
 		fmt.Println(*str.(*string))
 	}
 
-	time.Sleep(2*time.Second)
+	time.Sleep(2 * time.Second)
 }
