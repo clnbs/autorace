@@ -191,7 +191,7 @@ You can also watch RabbitMQ usage by going to a RabbitMQ interface on `http://lo
 
 ### Client side
 #### Join or create a party
-When Autorace stated, it open a prompt window asking for a user name : 
+When Autorace is started, it open a prompt window asking for a user name : 
 ```
 Enter your player name : toto
 ```
@@ -208,6 +208,7 @@ The prompt menu will ask if you want to create a party:
 Do you want to create a game ? (y/n) : 
 ```
 Press `y` or `n` then enter.  
+
 If you are willing to join a created address, a new prompt menu will pop like so :
 ```
 Choose a party from the list below : 
