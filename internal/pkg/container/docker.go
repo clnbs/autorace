@@ -13,7 +13,7 @@ import (
 
 // CreateDynamicServer create a dynamic server with a PartyUUID in argument.
 // CreateDynamicServer bind the dynamic server instance to networks in order to make it works
-func CreateDynamicServer(partyID string) error {
+func CreateDynamicServer(partyID string, env []string) error {
 	ctx := context.Background()
 	var networkID []string
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -28,7 +28,7 @@ func CreateDynamicServer(partyID string) error {
 	for _, net := range networks {
 		if strings.Contains(strings.ToLower(net.Name), "rabbitmq") ||
 			strings.Contains(strings.ToLower(net.Name), "logs") ||
-			strings.Contains(strings.ToLower(net.Name), "autorace_cache"){
+			strings.Contains(strings.ToLower(net.Name), "autorace_cache") {
 			networkID = append(networkID, net.ID)
 		}
 	}
@@ -36,23 +36,25 @@ func CreateDynamicServer(partyID string) error {
 		return errors.New("unable to find networks")
 	}
 	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Hostname:        "dynamic_"+partyID,
-		Domainname:      "",
-		User:            "",
-		Cmd:             strslice.StrSlice{
+		Hostname:   "dynamic_" + partyID,
+		Domainname: "",
+		User:       "",
+		Cmd: strslice.StrSlice{
 			partyID,
 		},
-		ArgsEscaped:     false,
-		Image:           imageName,
-		Entrypoint:      nil,
-	},&container.HostConfig{
+		ArgsEscaped: false,
+		Image:       imageName,
+		Entrypoint:  nil,
+		Env:         env,
+	}, &container.HostConfig{
 		Binds:           nil,
 		ContainerIDFile: "",
 		NetworkMode:     "",
 		RestartPolicy:   container.RestartPolicy{},
+		AutoRemove:      true,
 	},
-	nil ,
-	nil,
+		nil,
+		nil,
 		"dynamic_"+partyID)
 	if err != nil {
 		return err

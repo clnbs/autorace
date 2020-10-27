@@ -16,7 +16,7 @@ import (
 
 var (
 	waitDuration           = 5 * time.Second
-	targetedFramePerSecond = 60
+	targetedFramePerSecond = 120
 	possibleColor          = []color.RGBA{
 		colornames.Blue,
 		colornames.Red,
@@ -38,13 +38,13 @@ type MainGameWindow struct {
 }
 
 // NewMainGameWindow create a MainGameWindow structure and feed some of the main components
-func NewMainGameWindow(config MainWindowConfig, playerName, rabbitAddr string) (*MainGameWindow, error) {
+func NewMainGameWindow(config MainWindowConfig, playerName, rabbitAddr string, rabbitPort int) (*MainGameWindow, error) {
 	var err error
 	newMainWindow := new(MainGameWindow)
 	newMainWindow.CameraWindow = NewMainWindowCamera()
 	newMainWindow.WindowConfiguration = config
 	newMainWindow.events = make(chan models.Event)
-	newMainWindow.GameInfo, err = NewGameCommunication(playerName, rabbitAddr, newMainWindow.events)
+	newMainWindow.GameInfo, err = NewGameCommunication(playerName, rabbitAddr, rabbitPort, newMainWindow.events)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,6 @@ func (mainGameWindow *MainGameWindow) Run() {
 		logger.Error("error while constructing racetrack :", err)
 		return
 	}
-
 
 	frames := 0
 	gameTickerDuration := time.Duration((1.0/float64(targetedFramePerSecond))*1000000000) * time.Nanosecond

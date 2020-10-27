@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/clnbs/autorace/internal/app/models"
+	"os"
 	"time"
 
 	"github.com/clnbs/autorace/internal/pkg/container"
@@ -24,11 +25,11 @@ type StaticServer struct {
 }
 
 // NewStaticServer generate a StaticServer (aka static server) with a particular RabbitMQ address
-func NewStaticServer(rabbitAddr string) (*StaticServer, error) {
+func NewStaticServer(rabbitConfig messaging.RabbitConnectionConfiguration) (*StaticServer, error) {
 	newCreatorServer := new(StaticServer)
 	var err error
 	newCreatorServer.redisConnection = database.NewRedisClient()
-	newCreatorServer.rabbitConnection, err = messaging.NewRabbitConnection(rabbitAddr)
+	newCreatorServer.rabbitConnection, err = messaging.NewRabbitConnection(rabbitConfig)
 	return newCreatorServer, err
 }
 
@@ -81,12 +82,21 @@ func (staticServer *StaticServer) partyCreator(msg amqp.Delivery) {
 	newPartyUUID := uuid.New()
 	err = staticServer.redisConnection.SetPartyConfiguration(newPartyUUID.String(), partyCreationToken)
 	if err != nil {
-		staticServer.rabbitConnection.SendMessageOnTopic(errors.New("unable to register party with current configuration"), "autocar.parties.creation." + partyCreationToken.ClientID)
+		staticServer.rabbitConnection.SendMessageOnTopic(errors.New("unable to register party with current configuration"), "autocar.parties.creation."+partyCreationToken.ClientID)
 		logger.Error("unable to register party :", err)
 	}
-	err = container.CreateDynamicServer(newPartyUUID.String())
+	envConfig := []string{
+		"FLUENTD_HOST=" + os.Getenv("FLUENTD_HOST"),
+		"FLUENTD_PORT=" + os.Getenv("FLUENTD_PORT"),
+		"LOG_LEVEL=" + os.Getenv("LOG_LEVEL"),
+		"RABBITMQ_HOST=" + os.Getenv("RABBITMQ_HOST"),
+		"RABBITMQ_PORT=" + os.Getenv("RABBITMQ_PORT"),
+		"RABBITMQ_USER=" + os.Getenv("RABBITMQ_USER"),
+		"RABBITMQ_PASS=" + os.Getenv("RABBITMQ_PASS"),
+	}
+	err = container.CreateDynamicServer(newPartyUUID.String(), envConfig)
 	if err != nil {
-		staticServer.rabbitConnection.SendMessageOnTopic(errors.New("unable to start a party server"), "autocar.parties.creation." + partyCreationToken.ClientID)
+		staticServer.rabbitConnection.SendMessageOnTopic(errors.New("unable to start a party server"), "autocar.parties.creation."+partyCreationToken.ClientID)
 		logger.Error("unable to start a party container :", err)
 	}
 }

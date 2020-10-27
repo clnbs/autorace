@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+
 	"github.com/fluent/fluent-logger-golang/fluent"
 )
 
@@ -11,7 +12,7 @@ import (
 type FluentLogger struct {
 	fluent *fluent.Fluent
 	logLvl LogLevel
-	app string
+	app    string
 }
 
 // SetFluentLogger is use to initialize a FluentLogger. It accept a Fluentd address,
@@ -21,8 +22,8 @@ func SetFluentLogger(host, logLevel, app string, port int) (ILog, error) {
 	fluentLog := new(FluentLogger)
 	var err error
 	fluentLog.fluent, err = fluent.New(fluent.Config{
-		FluentPort:         port,
-		FluentHost:         host,
+		FluentPort: port,
+		FluentHost: host,
 	})
 	if err != nil {
 		return nil, err

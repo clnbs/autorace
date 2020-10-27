@@ -28,14 +28,21 @@ type RabbitConnection struct {
 	SendingMessage  map[string]chan []byte
 }
 
+// RabbitConnectionConfiguration hold configuration to make a RabbitMQ connection possible
+type RabbitConnectionConfiguration struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
+}
+
 // NewRabbitConnection create a RabbitConnection from a RabbitMQ address
-//TODO get RabbitMQ connection from a config file
-func NewRabbitConnection(rabbitAddr string) (*RabbitConnection, error) {
+func NewRabbitConnection(config RabbitConnectionConfiguration) (*RabbitConnection, error) {
 	rConn := new(RabbitConnection)
 	rConn.ReceivedMessage = make(map[string]chan []byte)
 	rConn.SendingMessage = make(map[string]chan []byte)
 	var err error
-	rConn.RabbitURL = "amqp://guest:guest@"+rabbitAddr+":5672/"
+	rConn.RabbitURL = "amqp://" + config.User + ":" + config.Password + "@" + config.Host + ":" + config.Port + "/"
 	rConn.conn, err = amqp.Dial(rConn.RabbitURL)
 	if err != nil {
 		return nil, err
@@ -115,7 +122,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopic(topic string, handler func(
 		nil,   // no-wait
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	err = rConn.partiesChannel.QueueBind(
@@ -126,7 +133,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopic(topic string, handler func(
 		nil,             // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 
@@ -141,13 +148,13 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopic(topic string, handler func(
 		nil,        // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	loop := make(chan os.Signal)
 	signal.Notify(loop, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		readyToReceive<-true
+		readyToReceive <- true
 		for msg := range msgs {
 			communicationChan <- handler(msg.Body)
 		}
@@ -170,7 +177,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithHeader(topic string, han
 		nil,   // no-wait
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	err = rConn.partiesChannel.QueueBind(
@@ -181,7 +188,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithHeader(topic string, han
 		nil,             // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	msgs, err := rConn.partiesChannel.Consume(
@@ -194,19 +201,19 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithHeader(topic string, han
 		nil,        // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	loop := make(chan os.Signal)
 	signal.Notify(loop, os.Interrupt, syscall.SIGTERM)
 	logger.Trace("waiting message on topic :", topic)
 	go func() {
-		readyToReceive<-true
+		readyToReceive <- true
 		for msg := range msgs {
 			communicationChan <- handler(msg)
 		}
 	}()
-	<- loop
+	<-loop
 	return nil
 }
 
@@ -225,7 +232,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithCallback(topic, response
 		nil,   // no-wait
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	err = rConn.partiesChannel.QueueBind(
@@ -236,7 +243,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithCallback(topic, response
 		nil,             // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 
@@ -250,14 +257,14 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithCallback(topic, response
 		nil,        // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	loop := make(chan os.Signal)
 	signal.Notify(loop, os.Interrupt, syscall.SIGTERM)
 	logger.Trace("waiting message on topic :", topic)
 	go func() {
-		readyToReceive<-true
+		readyToReceive <- true
 		for msg := range msgs {
 			var err error
 			responseForged, forgedResponseTopic := responseCreator(msg)
@@ -294,7 +301,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithHandler(topic string, ha
 		nil,   // no-wait
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	err = rConn.partiesChannel.QueueBind(
@@ -305,7 +312,7 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithHandler(topic string, ha
 		nil,             // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 
@@ -320,13 +327,13 @@ func (rConn *RabbitConnection) ReceiveMessageOnTopicWithHandler(topic string, ha
 		nil,        // args
 	)
 	if err != nil {
-		readyToReceive<-false
+		readyToReceive <- false
 		return err
 	}
 	loop := make(chan os.Signal)
 	signal.Notify(loop, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		readyToReceive<-true
+		readyToReceive <- true
 		for msg := range msgs {
 			handler(msg)
 		}

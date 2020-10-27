@@ -24,12 +24,12 @@ type AutoraceClient struct {
 }
 
 //NewAutoraceClient return a AutoraceClient with a given name
-func NewAutoraceClient(name, rabbitAddr string) (*AutoraceClient, error) {
+func NewAutoraceClient(name string, rabbitConfig messaging.RabbitConnectionConfiguration) (*AutoraceClient, error) {
 	var err error
 	arClient := new(AutoraceClient)
 	arClient.SessionID = uuid.New()
 	arClient.playerName = name
-	arClient.rabbitConnection, err = messaging.NewRabbitConnection(rabbitAddr)
+	arClient.rabbitConnection, err = messaging.NewRabbitConnection(rabbitConfig)
 	return arClient, err
 }
 
@@ -312,10 +312,10 @@ func (arClient *AutoraceClient) ReceiveGameState(partyID string, readyToReceive 
 		}
 	}()
 	if !<-ready {
-		readyToReceive<-false
+		readyToReceive <- false
 		return errors.New("could not receive message on game state")
 	}
-	readyToReceive<-true
+	readyToReceive <- true
 	for {
 		response := <-received
 		switch response.(type) {

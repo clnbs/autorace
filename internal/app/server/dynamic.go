@@ -33,12 +33,12 @@ type DynamicPartyServer struct {
 // NewDynamicPartyServer create a DynamicPartyServer instance.
 // NewDynamicPartyServer generate a party from a stored party configuration in a Redis database
 // and send it back to the player who ask for its creation.
-func NewDynamicPartyServer(partyID, rabbitAddr string) (*DynamicPartyServer, error) {
+func NewDynamicPartyServer(partyID string, rabbitConfig messaging.RabbitConnectionConfiguration) (*DynamicPartyServer, error) {
 	dServer := new(DynamicPartyServer)
-	dServer.tickPerSecond = 60
+	dServer.tickPerSecond = 120
 	dServer.closestRacetrackPointIndex = make(map[string]int)
 	var err error
-	dServer.rabbitConnection, err = messaging.NewRabbitConnection(rabbitAddr)
+	dServer.rabbitConnection, err = messaging.NewRabbitConnection(rabbitConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,8 @@ func (dServer *DynamicPartyServer) SendPartyToOnePlayer(playerID string) {
 func (dServer *DynamicPartyServer) ReceiveAddPlayer(readyToReceive chan bool) error {
 	err := dServer.rabbitConnection.ReceiveMessageOnTopicWithHandler(
 		"autocar.party."+dServer.party.PartyUUID.String()+".addPlayer", // topic
-		dServer.addPlayerHandler,                                       // handler
-		readyToReceive,                                                 // ready to receive chan
+		dServer.addPlayerHandler, // handler
+		readyToReceive,           // ready to receive chan
 	)
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (dServer *DynamicPartyServer) SyncPartyForOnePlayer(clientID string) {
 	}
 	//Sending it
 	dServer.rabbitConnection.SendMessageOnTopic(
-		syncMessage,                                                         // object to send
+		syncMessage, // object to send
 		"autocar.party."+dServer.party.PartyUUID.String()+".sync."+clientID, // topic
 	)
 }

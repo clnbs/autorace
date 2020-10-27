@@ -29,7 +29,13 @@ func main() {
 	rabbitMQAddr, _ := reader.ReadString('\n')
 	rabbitMQAddr = strings.Replace(rabbitMQAddr, "\n", "", -1)
 	rabbitMQAddr = strings.Replace(rabbitMQAddr, "\r", "", -1)
-	mainWindow, err := engine.NewMainGameWindow(config, playerName, rabbitMQAddr)
+	var rabbitMQPort int
+	fmt.Print("Enter server port : ")
+	_, err := fmt.Scanf("%d", &rabbitMQPort)
+	if rabbitMQPort == 0 {
+		rabbitMQPort = 5672
+	}
+	mainWindow, err := engine.NewMainGameWindow(config, playerName, rabbitMQAddr, rabbitMQPort)
 	if err != nil {
 		logger.Error("error while setting up mainWindow :", err)
 		return
@@ -64,7 +70,7 @@ func joinParty(mainWindow *engine.MainGameWindow) error {
 	}
 	fmt.Println("Choose a party from the list below : ")
 	for index, party := range partyList {
-		fmt.Println("party",index+1,":", party)
+		fmt.Println("party", index+1, ":", party)
 	}
 
 	chosenParty := -1
@@ -76,7 +82,7 @@ func joinParty(mainWindow *engine.MainGameWindow) error {
 		}
 		chosenParty--
 	}
-	fmt.Println("chosen party", chosenParty, ":",partyList[chosenParty])
+	fmt.Println("chosen party", chosenParty, ":", partyList[chosenParty])
 
 	go func() {
 		logger.Debug("about to start communication daemon")

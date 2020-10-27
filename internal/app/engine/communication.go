@@ -4,7 +4,9 @@ import (
 	"github.com/clnbs/autorace/internal/app/client"
 	"github.com/clnbs/autorace/internal/app/models"
 	"github.com/clnbs/autorace/internal/app/server"
+	"github.com/clnbs/autorace/internal/pkg/messaging"
 	"github.com/clnbs/autorace/pkg/logger"
+	"strconv"
 
 	"github.com/faiface/pixel"
 )
@@ -23,10 +25,16 @@ type GameCommunication struct {
 
 // NewGameCommunication create game communication handler by feeding some of the main
 // GameCommunication content.
-func NewGameCommunication(name, rabbitAddr string, events chan models.Event) (*GameCommunication, error) {
+func NewGameCommunication(name, rabbitAddr string, rabbitPort int, events chan models.Event) (*GameCommunication, error) {
 	newClient := new(GameCommunication)
 	var err error
-	newClient.Client, err = client.NewAutoraceClient(name, rabbitAddr)
+	rabbitMQConfig := messaging.RabbitConnectionConfiguration{
+		Host:     rabbitAddr,
+		Port:     strconv.FormatInt(int64(rabbitPort), 10),
+		User:     "guest",
+		Password: "guest",
+	}
+	newClient.Client, err = client.NewAutoraceClient(name, rabbitMQConfig)
 	if err != nil {
 		return nil, err
 	}

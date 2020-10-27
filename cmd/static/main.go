@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/clnbs/autorace/internal/pkg/messaging"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,7 +12,10 @@ import (
 	"github.com/clnbs/autorace/pkg/logger"
 )
 
-var hitCounter = 5
+var (
+	hitCounter     = 5
+	rabbitMQConfig messaging.RabbitConnectionConfiguration
+)
 
 func init() {
 	logger.SetStdLogger("trace", "stdout")
@@ -28,13 +32,19 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	rabbitMQConfig = messaging.RabbitConnectionConfiguration{
+		Host:     os.Getenv("RABBITMQ_HOST"),
+		Port:     os.Getenv("RABBITMQ_PORT"),
+		User:     os.Getenv("RABBITMQ_USER"),
+		Password: os.Getenv("RABBITMQ_PASS"),
+	}
 }
 
 func main() {
 	stop := make(chan os.Signal)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	readyToReceive := make(chan bool)
-	srvr, err := server.NewStaticServer("rabbit")
+	srvr, err := server.NewStaticServer(rabbitMQConfig)
 	if err != nil {
 		logger.Error("error while creation server :", err)
 		return

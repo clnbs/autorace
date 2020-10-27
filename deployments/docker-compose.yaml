@@ -32,6 +32,8 @@ services:
     depends_on:
       - rabbit
       - fluentd
+    env_file:
+      - ../configs/static/.env
 
 
   fluentd:

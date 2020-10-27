@@ -2,22 +2,34 @@ package main
 
 import (
 	"errors"
+	"github.com/clnbs/autorace/internal/pkg/messaging"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/clnbs/autorace/internal/app/server"
 	"github.com/clnbs/autorace/pkg/logger"
 )
 
-var hitCounter = 5
+var (
+	hitCounter     = 5
+	rabbitMQConfig messaging.RabbitConnectionConfiguration
+)
 
 func init() {
-	logger.SetStdLogger("trace", "stdout")
 	var err error
+	fluentdAddr := os.Getenv("FLUENTD_HOST")
+	stringifyFluentdPort := os.Getenv("FLUENTD_PORT")
+	logLevel := os.Getenv("LOG_LEVEL")
+	fluentdPort, err := strconv.ParseInt(stringifyFluentdPort, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	logger.SetStdLogger(logLevel, "stdout")
 	err = errors.New("dummy")
 	index := 0
 	for err != nil && index < hitCounter {
-		_, err = logger.SetFluentLogger("fluentd", "trace", "dynamic", 24224)
+		_, err = logger.SetFluentLogger(fluentdAddr, logLevel, "dynamic", int(fluentdPort))
 		if err != nil {
 			time.Sleep(5 * time.Second)
 		}
@@ -26,11 +38,17 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	rabbitMQConfig = messaging.RabbitConnectionConfiguration{
+		Host:     os.Getenv("RABBITMQ_HOST"),
+		Port:     os.Getenv("RABBITMQ_PORT"),
+		User:     os.Getenv("RABBITMQ_USER"),
+		Password: os.Getenv("RABBITMQ_PASS"),
+	}
 }
 
 func main() {
 	readyToReceive := make(chan bool)
-	srvr, err := server.NewDynamicPartyServer(os.Args[1], "rabbit")
+	srvr, err := server.NewDynamicPartyServer(os.Args[1], rabbitMQConfig)
 	if err != nil {
 		logger.Error("while creating dynamic server :", err)
 		return
