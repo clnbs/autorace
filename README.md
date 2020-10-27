@@ -301,8 +301,8 @@ Project Link: [https://github.com/clnbs/autorace](https://github.com/clnbs/autor
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 
-* [StackOverflow](https://stackoverflow.com/)
-* [Gustavo Maciel - Gamasutra](https://www.gamasutra.com/blogs/GustavoMaciel/20131229/207833/Generating_Procedural_Racetracks.php)
+* [StackOverflow](https://stackoverflow.com/) - For their reliable answers and their legendary kindness
+* [Gustavo Maciel - Gamasutra](https://www.gamasutra.com/blogs/GustavoMaciel/20131229/207833/Generating_Procedural_Racetracks.php) - For the inspiration
 
 
 
