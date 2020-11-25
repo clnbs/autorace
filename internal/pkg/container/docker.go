@@ -3,6 +3,8 @@ package container
 import (
 	"context"
 	"errors"
+	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -11,62 +13,125 @@ import (
 	"github.com/docker/docker/client"
 )
 
-// CreateDynamicServer create a dynamic server with a PartyUUID in argument.
-// CreateDynamicServer bind the dynamic server instance to networks in order to make it works
-func CreateDynamicServer(partyID string, env []string) error {
+type DockerClient struct {
+	Cli *client.Client
+}
+
+type DockerContainerFactory struct {
+	Client *DockerClient
+}
+
+func NewDockerContainerFactory() (*DockerContainerFactory, error) {
+	var err error
+	dockerContainerFactory := new(DockerContainerFactory)
+	dockerContainerFactory.Client = new(DockerClient)
+	dockerContainerFactory.Client.Cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	return dockerContainerFactory, err
+}
+
+func (dContainerFactory *DockerContainerFactory) PullPod(info *PodInfo) error {
 	ctx := context.Background()
-	var networkID []string
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	imageName := createImageNameWithVersion(info)
+	imageList, err := dContainerFactory.Client.Cli.ImageList(ctx, types.ImageListOptions{})
 	if err != nil {
 		return err
 	}
-	imageName := "autorace_dynamic:latest"
-	networks, err := cli.NetworkList(ctx, types.NetworkListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, net := range networks {
-		if strings.Contains(strings.ToLower(net.Name), "rabbitmq") ||
-			strings.Contains(strings.ToLower(net.Name), "logs") ||
-			strings.Contains(strings.ToLower(net.Name), "autorace_cache") {
-			networkID = append(networkID, net.ID)
+	for _, image := range imageList {
+		if image.RepoTags[0] == imageName {
+			return nil
 		}
 	}
-	if len(networkID) == 0 {
-		return errors.New("unable to find networks")
+	// Weird bug : when output is not catch, image is not pull properly
+	reader, err := dContainerFactory.Client.Cli.ImagePull(ctx, imageName, types.ImagePullOptions{})
+	if reader == nil {
+		return err
 	}
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
-		Hostname:   "dynamic_" + partyID,
-		Domainname: "",
-		User:       "",
-		Cmd: strslice.StrSlice{
-			partyID,
-		},
-		ArgsEscaped: false,
-		Image:       imageName,
-		Entrypoint:  nil,
-		Env:         env,
+	io.Copy(ioutil.Discard, reader)
+	return err
+}
+
+type DockerContainerExecutor struct {
+	Client *DockerClient
+}
+
+func NewDockerContainerExecutor() (*DockerContainerExecutor, error) {
+	var err error
+	dockerContainerExecutor := new(DockerContainerExecutor)
+	dockerContainerExecutor.Client = new(DockerClient)
+	dockerContainerExecutor.Client.Cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	return dockerContainerExecutor, err
+}
+
+func (dContainerExecutor *DockerContainerExecutor) Run(info *PodInfo) error {
+	ctx := context.Background()
+	cmd := dContainerExecutor.prepareArgs(info)
+	imageName := createImageNameWithVersion(info)
+
+	containerID, err := dContainerExecutor.createContainer(ctx, &container.Config{
+		Hostname: info.Hostname,
+		Env:      info.Env,
+		Cmd:      cmd,
+		Image:    imageName,
 	}, &container.HostConfig{
-		Binds:           nil,
-		ContainerIDFile: "",
-		NetworkMode:     "",
-		RestartPolicy:   container.RestartPolicy{},
-		AutoRemove:      true,
-	},
-		nil,
-		nil,
-		"dynamic_"+partyID)
+		RestartPolicy: container.RestartPolicy{},
+		AutoRemove:    true,
+	})
 	if err != nil {
 		return err
 	}
+	err = dContainerExecutor.attachNetworks(info, ctx, containerID)
+	if err != nil {
+		return err
+	}
+	return dContainerExecutor.Client.Cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
+}
+
+func (dContainerExecutor *DockerContainerExecutor) attachNetworks(info *PodInfo, ctx context.Context, containerID string) error {
+	var networkID []string
+	nets, err := dContainerExecutor.Client.Cli.NetworkList(ctx, types.NetworkListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, net := range nets {
+		toLowerCaseNet := strings.ToLower(net.Name)
+		for _, netToAttach := range info.Networks {
+			toLowerCaseNetToAttach := strings.ToLower(netToAttach)
+			if strings.Contains(toLowerCaseNet, toLowerCaseNetToAttach) {
+				networkID = append(networkID, net.ID)
+			}
+		}
+	}
+	if len(networkID) != len(info.Networks) {
+		return errors.New("unable to find asked networks")
+	}
 	for _, netID := range networkID {
-		err = cli.NetworkConnect(ctx, netID, resp.ID, nil)
+		err = dContainerExecutor.Client.Cli.NetworkConnect(ctx, netID, containerID, nil)
 		if err != nil {
 			return err
 		}
 	}
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return err
-	}
 	return nil
+}
+
+func (dContainerExecutor *DockerContainerExecutor) prepareArgs(info *PodInfo) strslice.StrSlice {
+	var cmd strslice.StrSlice
+	for _, arg := range info.Args {
+		cmd = append(cmd, arg)
+	}
+	return cmd
+}
+
+func (dContainerExecutor *DockerContainerExecutor) createContainer(ctx context.Context, config *container.Config, hostConfig *container.HostConfig) (string, error) {
+	resp, err := dContainerExecutor.Client.Cli.ContainerCreate(ctx, config, hostConfig, nil, nil, "")
+	if err != nil {
+		return "", err
+	}
+	return resp.ID, nil
+}
+
+func createImageNameWithVersion(info *PodInfo) string {
+	if info.Version == "" {
+		return info.ImageName + ":latest"
+	}
+	return info.ImageName + ":" + info.Version
 }

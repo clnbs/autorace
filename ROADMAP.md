@@ -4,8 +4,6 @@ Currently, I do not use a roadmap tools because of the project's size. As long a
 
 ## TODO list
 #### URGENT 
- - Make configuration via environment variable (server side)
- - Make configuration via YAML file (client side)
  - Make a fully tested project with dependencies injection
 
 #### Hot

@@ -85,19 +85,40 @@ func (staticServer *StaticServer) partyCreator(msg amqp.Delivery) {
 		staticServer.rabbitConnection.SendMessageOnTopic(errors.New("unable to register party with current configuration"), "autocar.parties.creation."+partyCreationToken.ClientID)
 		logger.Error("unable to register party :", err)
 	}
-	envConfig := []string{
-		"FLUENTD_HOST=" + os.Getenv("FLUENTD_HOST"),
-		"FLUENTD_PORT=" + os.Getenv("FLUENTD_PORT"),
-		"LOG_LEVEL=" + os.Getenv("LOG_LEVEL"),
-		"RABBITMQ_HOST=" + os.Getenv("RABBITMQ_HOST"),
-		"RABBITMQ_PORT=" + os.Getenv("RABBITMQ_PORT"),
-		"RABBITMQ_USER=" + os.Getenv("RABBITMQ_USER"),
-		"RABBITMQ_PASS=" + os.Getenv("RABBITMQ_PASS"),
+	containerInfo := &container.PodInfo{
+		ImageName: "autorace_dynamic",
+		Version:   "",
+		Hostname:  "dynamic_" + newPartyUUID.String(),
+		Env: []string{
+			"FLUENTD_HOST=" + os.Getenv("FLUENTD_HOST"),
+			"FLUENTD_PORT=" + os.Getenv("FLUENTD_PORT"),
+			"LOG_LEVEL=" + os.Getenv("LOG_LEVEL"),
+			"RABBITMQ_HOST=" + os.Getenv("RABBITMQ_HOST"),
+			"RABBITMQ_PORT=" + os.Getenv("RABBITMQ_PORT"),
+			"RABBITMQ_USER=" + os.Getenv("RABBITMQ_USER"),
+			"RABBITMQ_PASS=" + os.Getenv("RABBITMQ_PASS"),
+		},
+		Args:     []string{newPartyUUID.String()},
+		Networks: []string{"rabbitmq", "logs", "autorace_cache"},
 	}
-	err = container.CreateDynamicServer(newPartyUUID.String(), envConfig)
+	factory, err := container.NewDockerContainerFactory()
 	if err != nil {
-		staticServer.rabbitConnection.SendMessageOnTopic(errors.New("unable to start a party server"), "autocar.parties.creation."+partyCreationToken.ClientID)
-		logger.Error("unable to start a party container :", err)
+		logger.Error("while creating factory for docker pod manager :", err)
+		return
+	}
+	executor, err := container.NewDockerContainerExecutor()
+	if err != nil {
+		logger.Error("while creating executor for docker pod manager :", err)
+		return
+	}
+	podManager := container.NewPodManager(containerInfo, factory, executor)
+	err = podManager.PullPod()
+	if err != nil {
+		logger.Error("while pulling image container with pod manager :", err)
+	}
+	err = podManager.Run()
+	if err != nil {
+		logger.Error("while starting pod with pod manager :", err)
 	}
 }
 
