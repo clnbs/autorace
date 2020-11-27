@@ -13,14 +13,19 @@ import (
 	"github.com/docker/docker/client"
 )
 
+// DockerClient hold client connection in order to pull image and start container
 type DockerClient struct {
 	Cli *client.Client
 }
 
+// PodFactory for Docker manager
+
+// DockerContainerFactory implement PodFactory interface for Docker manager
 type DockerContainerFactory struct {
 	Client *DockerClient
 }
 
+// NewDockerContainerFactory create a DockerContainerFactory
 func NewDockerContainerFactory() (*DockerContainerFactory, error) {
 	var err error
 	dockerContainerFactory := new(DockerContainerFactory)
@@ -29,6 +34,7 @@ func NewDockerContainerFactory() (*DockerContainerFactory, error) {
 	return dockerContainerFactory, err
 }
 
+// PullPod pull image if it does not exist locally
 func (dContainerFactory *DockerContainerFactory) PullPod(info *PodInfo) error {
 	ctx := context.Background()
 	imageName := createImageNameWithVersion(info)
@@ -50,10 +56,14 @@ func (dContainerFactory *DockerContainerFactory) PullPod(info *PodInfo) error {
 	return err
 }
 
+// PodExecutor for Docker manager
+
+// DockerContainerExecutor implement PodExecutor interface for Docker manager
 type DockerContainerExecutor struct {
 	Client *DockerClient
 }
 
+// NewDockerContainerExecutor create a DockerContainerExecutor
 func NewDockerContainerExecutor() (*DockerContainerExecutor, error) {
 	var err error
 	dockerContainerExecutor := new(DockerContainerExecutor)
@@ -62,6 +72,7 @@ func NewDockerContainerExecutor() (*DockerContainerExecutor, error) {
 	return dockerContainerExecutor, err
 }
 
+// Run start a Docker container
 func (dContainerExecutor *DockerContainerExecutor) Run(info *PodInfo) error {
 	ctx := context.Background()
 	cmd := dContainerExecutor.prepareArgs(info)
@@ -79,14 +90,14 @@ func (dContainerExecutor *DockerContainerExecutor) Run(info *PodInfo) error {
 	if err != nil {
 		return err
 	}
-	err = dContainerExecutor.attachNetworks(info, ctx, containerID)
+	err = dContainerExecutor.attachNetworks(ctx, info, containerID)
 	if err != nil {
 		return err
 	}
 	return dContainerExecutor.Client.Cli.ContainerStart(ctx, containerID, types.ContainerStartOptions{})
 }
 
-func (dContainerExecutor *DockerContainerExecutor) attachNetworks(info *PodInfo, ctx context.Context, containerID string) error {
+func (dContainerExecutor *DockerContainerExecutor) attachNetworks(ctx context.Context, info *PodInfo, containerID string) error {
 	var networkID []string
 	nets, err := dContainerExecutor.Client.Cli.NetworkList(ctx, types.NetworkListOptions{})
 	if err != nil {
