@@ -1,0 +1,12 @@
+pod_information:
+  image_name: "autorace_dynamic"
+  version: "latest"
+  hostname: "dynamic_"
+  env:
+    - "ENVIRONMENT=$ENVIRONMENT"
+    - "LOG_LEVEL=debug"
+  args:
+    - "ls"
+    - "-lah"
+  networks:
+    - "logs"

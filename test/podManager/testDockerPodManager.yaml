@@ -1,0 +1,10 @@
+pod_information:
+  image_name: "hello-world"
+  version: ""
+  hostname: "testing_hello-world"
+  env:
+    - "ENVIRONMENT=${ENVIRONMENT}"
+    - "LOG_LEVEL=debug"
+  args:
+  networks:
+    - "logs"

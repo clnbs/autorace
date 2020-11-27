@@ -1,0 +1,13 @@
+pod_information:
+  image_name: "dummyImage"
+  version: "dummy-1.0.0"
+  hostname: "dummy"
+  env:
+    - "ENVIRONMENT=dev"
+    - "LOG_LEVEL=debug"
+  args:
+    - "ls"
+    - "-lah"
+  networks:
+    - "dummy_net"
+    - "logs"

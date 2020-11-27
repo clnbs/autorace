@@ -41,3 +41,6 @@ clean_windows: ## Delete docker build image for windows release
 
 clean_server: ## Delete docker image for server stack
 	bash scripts/build.sh clean server
+
+testing: ## Start test for the all project
+	bash scripts/testing.sh

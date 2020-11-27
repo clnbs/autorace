@@ -2,8 +2,9 @@ package container
 
 import (
 	"os"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type MockDockerFactory struct{}
@@ -19,47 +20,24 @@ func (mockDockerExecutor *MockDockerExecutor) Run(info *PodInfo) error {
 }
 
 func TestNewDockerPodManager(t *testing.T) {
-	environment := os.Getenv("ENVIRONMENT")
-	environment = strings.ToLower(environment)
-	switch environment {
-	case "preproduction":
-		testDockerPodManager(t)
-	default:
-		testMockDockerPodManagerWithoutAction(t)
-	}
-}
+	containerInfo, err := NewPodInfoFromYAMLFile(os.Getenv("HOME") + "/go/src/github.com/clnbs/autorace/test/podManager/testDockerPodManager.yaml")
+	assert.Nil(t, err, "while ready pod configuration from YAML file : ", err)
 
-func testDockerPodManager(t *testing.T) {
-	containerInfo := &PodInfo{
-		ImageName: "hello-world",
-		Version:   "",
-		Hostname:  "testing_hello-world",
-		Env: []string{
-			"ENVIRONMENT=" + os.Getenv("ENVIRONMENT"),
-		},
-		Args:     nil,
-		Networks: nil,
-	}
 	dockerFactory, err := NewDockerContainerFactory()
-	if err != nil {
-		t.Fatal("while creating docker factory :", err)
-	}
+	assert.Nil(t, err, "while creating docker factory : ", err)
+
 	dockerExecutor, err := NewDockerContainerExecutor()
-	if err != nil {
-		t.Fatal("while creating docker executor :", err)
-	}
+	assert.Nil(t, err, "while creating docker executor : ", err)
+
 	dockerManager := NewPodManager(containerInfo, dockerFactory, dockerExecutor)
 	err = dockerManager.PullPod()
-	if err != nil {
-		t.Fatal("while pulling pod :", err)
-	}
+	assert.Nil(t, err, "while pulling pod : ", err)
+
 	err = dockerManager.Run()
-	if err != nil {
-		t.Fatal("while running pod :", err)
-	}
+	assert.Nil(t, err, "while running pod : ", err)
 }
 
-func testMockDockerPodManagerWithoutAction(t *testing.T) {
+func TestMockDockerPodManagerWithoutAction(t *testing.T) {
 	mockContainerInfo := &PodInfo{
 		ImageName: "mock",
 		Version:   "latest",
@@ -76,12 +54,8 @@ func testMockDockerPodManagerWithoutAction(t *testing.T) {
 	dockerContainer := NewPodManager(mockContainerInfo, mockDockerFactory, mockDockerExecutor)
 
 	err := dockerContainer.PullPod()
-	if err != nil {
-		t.Fatal("error while pulling image (this should not happen), err :", err)
-	}
+	assert.Nil(t, err, "error while pulling image (this should not happen) :", err)
 
 	err = dockerContainer.Run()
-	if err != nil {
-		t.Fatal("error while starting container (this should not happen), err :", err)
-	}
+	assert.Nil(t, err, "error while starting container (this should not happen) ", err)
 }
