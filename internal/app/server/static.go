@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/clnbs/autorace/internal/app/models"
+	"github.com/clnbs/autorace/internal/pkg/messaging/rabbit"
 	"os"
 	"time"
 
 	"github.com/clnbs/autorace/internal/pkg/container"
 	"github.com/clnbs/autorace/internal/pkg/database"
-	"github.com/clnbs/autorace/internal/pkg/messaging"
 	"github.com/clnbs/autorace/pkg/logger"
 	"github.com/clnbs/autorace/pkg/systool"
 
@@ -20,16 +20,16 @@ import (
 //StaticServer handle creation request and the list of ongoing parties who had not launched yet.
 // Every time a party is created, it start a new DynamicPartyServer instance
 type StaticServer struct {
-	rabbitConnection *messaging.RabbitConnection
+	rabbitConnection *rabbit.RabbitConnection
 	redisConnection  *database.RedisClient
 }
 
 // NewStaticServer generate a StaticServer (aka static server) with a particular RabbitMQ address
-func NewStaticServer(rabbitConfig messaging.RabbitConnectionConfiguration) (*StaticServer, error) {
+func NewStaticServer(rabbitConfig rabbit.RabbitConnectionConfiguration) (*StaticServer, error) {
 	newCreatorServer := new(StaticServer)
 	var err error
 	newCreatorServer.redisConnection = database.NewRedisClient()
-	newCreatorServer.rabbitConnection, err = messaging.NewRabbitConnection(rabbitConfig)
+	newCreatorServer.rabbitConnection, err = rabbit.NewRabbitConnection(rabbitConfig)
 	return newCreatorServer, err
 }
 

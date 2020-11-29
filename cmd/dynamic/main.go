@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"github.com/clnbs/autorace/internal/pkg/messaging"
+	"github.com/clnbs/autorace/internal/pkg/messaging/rabbit"
 	"os"
 	"strconv"
 	"time"
@@ -13,7 +13,7 @@ import (
 
 var (
 	hitCounter     = 5
-	rabbitMQConfig messaging.RabbitConnectionConfiguration
+	rabbitMQConfig rabbit.RabbitConnectionConfiguration
 )
 
 func init() {
@@ -38,7 +38,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	rabbitMQConfig = messaging.RabbitConnectionConfiguration{
+	rabbitMQConfig = rabbit.RabbitConnectionConfiguration{
 		Host:     os.Getenv("RABBITMQ_HOST"),
 		Port:     os.Getenv("RABBITMQ_PORT"),
 		User:     os.Getenv("RABBITMQ_USER"),

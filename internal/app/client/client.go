@@ -3,11 +3,11 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"github.com/clnbs/autorace/internal/pkg/messaging/rabbit"
 	"reflect"
 
 	"github.com/clnbs/autorace/internal/app/models"
 	"github.com/clnbs/autorace/internal/app/server"
-	"github.com/clnbs/autorace/internal/pkg/messaging"
 	"github.com/clnbs/autorace/pkg/logger"
 
 	"github.com/google/uuid"
@@ -20,16 +20,16 @@ type AutoraceClient struct {
 	playerName       string
 	playerUUID       uuid.UUID
 	partyUUID        uuid.UUID
-	rabbitConnection *messaging.RabbitConnection
+	rabbitConnection *rabbit.RabbitConnection
 }
 
 //NewAutoraceClient return a AutoraceClient with a given name
-func NewAutoraceClient(name string, rabbitConfig messaging.RabbitConnectionConfiguration) (*AutoraceClient, error) {
+func NewAutoraceClient(name string, rabbitConfig rabbit.RabbitConnectionConfiguration) (*AutoraceClient, error) {
 	var err error
 	arClient := new(AutoraceClient)
 	arClient.SessionID = uuid.New()
 	arClient.playerName = name
-	arClient.rabbitConnection, err = messaging.NewRabbitConnection(rabbitConfig)
+	arClient.rabbitConnection, err = rabbit.NewRabbitConnection(rabbitConfig)
 	return arClient, err
 }
 
@@ -61,8 +61,8 @@ func (arClient *AutoraceClient) RequestPlayerCreation(readyToReceive chan bool) 
 	if response == nil {
 		return nil, errors.New("unable to receive response to Player creation token")
 	}
-	if reflect.TypeOf(response) == reflect.TypeOf(messaging.ErrorResponse{}) {
-		return nil, errors.New(response.(messaging.ErrorResponse).ErrorMessage)
+	if reflect.TypeOf(response) == reflect.TypeOf(rabbit.ErrorResponse{}) {
+		return nil, errors.New(response.(rabbit.ErrorResponse).ErrorMessage)
 	}
 	// assign player UUID to this object for further usage
 	arClient.playerUUID = response.(*models.Player).PlayerUUID
@@ -73,10 +73,10 @@ func (arClient *AutoraceClient) computePlayerCreationResponse(msg []byte) interf
 	playerInResponse := new(models.Player)
 	err := json.Unmarshal(msg, playerInResponse)
 	if err != nil {
-		serverError := new(messaging.ErrorResponse)
+		serverError := new(rabbit.ErrorResponse)
 		err = json.Unmarshal(msg, serverError)
 		if err != nil {
-			return messaging.ErrorResponse{ErrorMessage: "unable to read response from server :" + err.Error()}
+			return rabbit.ErrorResponse{ErrorMessage: "unable to read response from server :" + err.Error()}
 		}
 		return serverError
 	}
@@ -106,8 +106,8 @@ func (arClient *AutoraceClient) RequestPartyCreation(partyConfig models.PartyCre
 	if response == nil {
 		return nil, errors.New("unable to receive response to Party creation token")
 	}
-	if reflect.TypeOf(response) == reflect.TypeOf(messaging.ErrorResponse{}) {
-		return nil, errors.New(response.(messaging.ErrorResponse).ErrorMessage)
+	if reflect.TypeOf(response) == reflect.TypeOf(rabbit.ErrorResponse{}) {
+		return nil, errors.New(response.(rabbit.ErrorResponse).ErrorMessage)
 	}
 	// store party UUID for further usage
 	arClient.partyUUID = response.(*models.Party).PartyUUID
@@ -118,10 +118,10 @@ func (arClient *AutoraceClient) computePartyCreationResponse(msg []byte) interfa
 	newParty := new(models.Party)
 	err := json.Unmarshal(msg, newParty)
 	if err != nil {
-		newServerError := new(messaging.ErrorResponse)
+		newServerError := new(rabbit.ErrorResponse)
 		err = json.Unmarshal(msg, newServerError)
 		if err != nil {
-			return messaging.ErrorResponse{ErrorMessage: err.Error()}
+			return rabbit.ErrorResponse{ErrorMessage: err.Error()}
 		}
 		return newServerError
 	}

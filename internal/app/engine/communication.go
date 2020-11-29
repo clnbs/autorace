@@ -4,7 +4,7 @@ import (
 	"github.com/clnbs/autorace/internal/app/client"
 	"github.com/clnbs/autorace/internal/app/models"
 	"github.com/clnbs/autorace/internal/app/server"
-	"github.com/clnbs/autorace/internal/pkg/messaging"
+	"github.com/clnbs/autorace/internal/pkg/messaging/rabbit"
 	"github.com/clnbs/autorace/pkg/logger"
 	"strconv"
 
@@ -28,7 +28,7 @@ type GameCommunication struct {
 func NewGameCommunication(name, rabbitAddr string, rabbitPort int, events chan models.Event) (*GameCommunication, error) {
 	newClient := new(GameCommunication)
 	var err error
-	rabbitMQConfig := messaging.RabbitConnectionConfiguration{
+	rabbitMQConfig := rabbit.RabbitConnectionConfiguration{
 		Host:     rabbitAddr,
 		Port:     strconv.FormatInt(int64(rabbitPort), 10),
 		User:     "guest",

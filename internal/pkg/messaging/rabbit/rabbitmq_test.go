@@ -1,4 +1,4 @@
-package messaging
+package rabbit
 
 import (
 	"encoding/json"

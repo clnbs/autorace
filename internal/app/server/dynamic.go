@@ -2,13 +2,13 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/clnbs/autorace/internal/pkg/messaging/rabbit"
 	"time"
 
 	"github.com/streadway/amqp"
 
 	"github.com/clnbs/autorace/internal/app/models"
 	"github.com/clnbs/autorace/internal/pkg/database"
-	"github.com/clnbs/autorace/internal/pkg/messaging"
 	"github.com/clnbs/autorace/pkg/logger"
 	"github.com/clnbs/autorace/pkg/systool"
 )
@@ -23,7 +23,7 @@ type SyncMessageContent struct {
 // DynamicPartyServer hold logic to run a party from the generation of the racetrack to the end of it.
 // DynamicPartyServer also hold connection with clients.
 type DynamicPartyServer struct {
-	rabbitConnection           *messaging.RabbitConnection
+	rabbitConnection           *rabbit.RabbitConnection
 	redisConnection            *database.RedisClient
 	party                      *models.Party
 	closestRacetrackPointIndex map[string]int
@@ -33,12 +33,12 @@ type DynamicPartyServer struct {
 // NewDynamicPartyServer create a DynamicPartyServer instance.
 // NewDynamicPartyServer generate a party from a stored party configuration in a Redis database
 // and send it back to the player who ask for its creation.
-func NewDynamicPartyServer(partyID string, rabbitConfig messaging.RabbitConnectionConfiguration) (*DynamicPartyServer, error) {
+func NewDynamicPartyServer(partyID string, rabbitConfig rabbit.RabbitConnectionConfiguration) (*DynamicPartyServer, error) {
 	dServer := new(DynamicPartyServer)
 	dServer.tickPerSecond = 120
 	dServer.closestRacetrackPointIndex = make(map[string]int)
 	var err error
-	dServer.rabbitConnection, err = messaging.NewRabbitConnection(rabbitConfig)
+	dServer.rabbitConnection, err = rabbit.NewRabbitConnection(rabbitConfig)
 	if err != nil {
 		return nil, err
 	}
